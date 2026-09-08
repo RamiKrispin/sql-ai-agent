@@ -3,26 +3,32 @@ networks:
     driver: bridge
 services:
   python:
-    image: docker.io/rkrispin/python-dev-sql-ai-agent:0.0.1
+    build:
+      context: ./docker
+      dockerfile: Dockerfile_Dev
+      args:
+        VENV_NAME: sql-ai-agent-dev
+        PYTHON_VER: 3.12.11
+        RUFF_VER: 0.12.0
     volumes:
       # Mount the root folder that contains .git
       - .:/workspace:cached
+      - ${DUCKDB_DATABASES_PATH}:/databases/duckdb
     command: sleep infinity
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - DUCKDB_DATABASES_PATH=/databases/duckdb
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-my_db}
     networks:
       - sql-ai-agent
   postgres:
     image: postgres:15
-    ports:
-      - 5432:5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -30,11 +36,11 @@ services:
     volumes:
       - .:/workspace:cached
       - ./postgresql/initdb.d:/docker-entrypoint-initdb.d
-      - $POSTGRES_DATABASES_PATH/sql-ai-agent:/var/lib/postgresql/data
+      - ${POSTGRES_DATABASES_PATH}/sql-ai-agent:/var/lib/postgresql/data
     environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-my_db}
     networks:
       - sql-ai-agent
 # models:
