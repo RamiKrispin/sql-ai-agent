@@ -1,0 +1,1584 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SQL AI Agents in Production — Workshop</title>
+  <style>
+    :root {
+      --bg:#fff; --bg-soft:#f7f9fc; --bg-grid:#f1f5f9;
+      --ink:#0f172a; --ink-soft:#475569; --muted:#94a3b8;
+      --line:#e2e8f0; --line-soft:#eef2f7;
+      --blue-50:#eff6ff; --blue-100:#dbeafe; --blue-500:#3b82f6;
+      --blue-600:#2563eb; --blue-700:#1d4ed8;
+      --teal-500:#0ea5e9;
+      --amber-500:#f59e0b; --amber-50:#fffbeb;
+      --green-500:#10b981; --green-50:#ecfdf5;
+      --pink-500:#ec4899;
+      --violet-500:#8b5cf6; --violet-50:#f5f3ff;
+      --red-500:#ef4444; --red-50:#fef2f2;
+      --code-bg:#0f172a; --code-fg:#e2e8f0;
+      --shadow-sm:0 1px 2px rgba(15,23,42,.06);
+      --shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px rgba(15,23,42,.07);
+      --radius:18px; --maxw:1640px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+      font-feature-settings:"ss01","cv11";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+    /* chrome */
+    .progress{position:fixed;top:0;left:0;height:4px;width:0%;
+      background:linear-gradient(90deg,var(--blue-600),var(--teal-500));z-index:50;transition:width .25s ease}
+
+    .deck{position:relative;width:100%;height:100vh}
+    .slide{
+      position:absolute;inset:0;
+      display:flex;align-items:flex-start;
+      height:100vh;max-height:100vh;overflow:hidden;
+      padding:48px 56px 56px;
+      opacity:0;pointer-events:none;
+      transition:opacity .55s cubic-bezier(.4,0,.2,1);
+    }
+    .slide.active{opacity:1;pointer-events:auto;z-index:1}
+    .slide .wrap{margin:0 auto;width:100%;max-width:var(--maxw)}
+
+    /* typography — bumped 25–30% for projector use */
+    .eyebrow{font-size:22px;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--blue-700);font-weight:700;margin:0 0 18px}
+    h1.title{font-size:108px;line-height:1.04;letter-spacing:-.028em;margin:0 0 24px;font-weight:700}
+    h1.title .accent{background:linear-gradient(90deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    h2.h{font-size:72px;line-height:1.08;letter-spacing:-.02em;margin:0 0 18px;font-weight:700}
+    h2.h .accent{background:linear-gradient(90deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    h3.sub{font-size:34px;font-weight:500;color:var(--ink-soft);margin:0 0 28px;line-height:1.45;max-width:1280px}
+    p.lead{font-size:36px;line-height:1.45;color:var(--ink-soft);margin:0 0 22px;max-width:1280px}
+    .inline{background:var(--bg-soft);padding:3px 12px;border:1px solid var(--line);border-radius:7px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.95em;color:var(--ink)}
+
+    /* title art */
+    .title-art{position:absolute;right:-60px;top:50%;transform:translateY(-50%);
+      width:880px;height:880px;opacity:.45;pointer-events:none;z-index:0}
+    .title-wrap{position:relative;z-index:1}
+    .branding{margin-top:36px;color:var(--ink-soft);font-size:22px;letter-spacing:.04em}
+
+    /* code */
+    pre.code{background:var(--code-bg);color:var(--code-fg);padding:22px 28px;
+      border-radius:14px;font:26px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+      overflow-x:auto;box-shadow:0 6px 18px rgba(15,23,42,.15);margin:0}
+    pre.code .k{color:#93c5fd;font-weight:600}
+    pre.code .s{color:#fcd34d}
+    pre.code .c{color:#64748b}
+    pre.code .v{color:#86efac}
+    pre.code .f{color:#fcd34d;font-weight:600}
+
+    /* takeaway */
+    .takeaway-card{margin:24px auto 0;max-width:1300px;
+      background:linear-gradient(135deg,#fff,var(--bg-soft));border:1px solid var(--line);
+      border-radius:24px;padding:38px 48px;box-shadow:var(--shadow);text-align:center}
+    .takeaway-card .quote{font-size:40px;color:var(--ink);font-weight:600;
+      letter-spacing:-.01em;line-height:1.35;max-width:1100px;margin:0 auto}
+    .takeaway-card .foot{margin-top:20px;font-size:26px;color:var(--ink-soft)}
+
+    /* ---- workshop patterns ---- */
+
+    /* Agenda grid */
+    .agenda{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:30px}
+    .agenda .item{
+      border:1px solid var(--line);border-radius:var(--radius);
+      background:var(--bg);padding:28px 28px 24px;box-shadow:var(--shadow-sm);
+      display:flex;flex-direction:column;gap:10px;min-height:210px;position:relative;
+    }
+    .agenda .item.qa{background:linear-gradient(180deg,#fff,var(--blue-50));border-color:var(--blue-500)}
+    .agenda .item .num{
+      font-size:18px;font-weight:700;letter-spacing:.16em;color:var(--blue-700);text-transform:uppercase;
+    }
+    .agenda .item .ttl{font-size:30px;font-weight:600;color:var(--ink);line-height:1.22;letter-spacing:-.01em}
+    .agenda .item .time{
+      font-size:18px;color:var(--ink-soft);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      margin-top:auto;padding-top:8px;border-top:1px dashed var(--line-soft)
+    }
+
+    /* Section divider — large eyebrow + giant title */
+    .divider .eyebrow{font-size:30px;color:var(--blue-700);margin-bottom:24px}
+    .divider h2.h{font-size:120px;line-height:1.02}
+    .divider h3.sub{font-size:38px;color:var(--ink-soft);max-width:1300px}
+
+    /* Before/after columns */
+    .ba{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:24px}
+    .ba .col{border:1px solid var(--line);border-radius:var(--radius);padding:30px 32px;background:var(--bg);box-shadow:var(--shadow-sm)}
+    .ba .col.bad{border-color:#fecaca;background:linear-gradient(180deg,#fff,var(--red-50))}
+    .ba .col.good{border-color:#a7f3d0;background:linear-gradient(180deg,#fff,var(--green-50))}
+    .ba .lbl{font-size:24px;font-weight:700;letter-spacing:.04em;margin-bottom:14px}
+    .ba .col.bad .lbl{color:#b91c1c}
+    .ba .col.good .lbl{color:#047857}
+    .ba .col h4{font-size:32px;margin:0 0 12px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+    .ba .col ul{margin:0;padding-left:24px}
+    .ba .col li{font-size:24px;color:var(--ink-soft);line-height:1.5;margin-bottom:8px}
+    .ba .col .note{font-size:22px;color:var(--ink-soft);margin-top:14px;font-style:italic}
+
+    /* Pipeline (horizontal, 8 nodes) */
+    .pipe{display:flex;align-items:stretch;gap:0;margin-top:32px;flex-wrap:nowrap}
+    .pipe .node{
+      flex:1;border:1px solid var(--line);border-radius:14px;background:var(--bg);
+      padding:18px 14px;text-align:center;box-shadow:var(--shadow-sm);min-width:0;
+    }
+    .pipe .node.llm{background:linear-gradient(180deg,#fff,var(--blue-50));border-color:var(--blue-500)}
+    .pipe .node.user{background:linear-gradient(180deg,#fff,var(--violet-50));border-color:var(--violet-500)}
+    .pipe .node .num{font-size:14px;font-weight:700;letter-spacing:.18em;color:var(--blue-700);text-transform:uppercase;margin-bottom:6px}
+    .pipe .node .lbl{font-size:20px;font-weight:600;color:var(--ink);line-height:1.2}
+    .pipe .arrow{display:flex;align-items:center;justify-content:center;color:var(--ink-soft);padding:0 4px;flex:0 0 auto}
+    .pipe .arrow svg{width:22px;height:22px}
+    .pipe-cap{margin-top:22px;font-size:24px;color:var(--ink-soft);text-align:center;font-style:italic}
+
+    /* Mapping table */
+    .map{display:grid;grid-template-columns:1fr 1.2fr;gap:0;margin-top:28px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+    .map .head{background:var(--bg-soft);font-weight:700;font-size:22px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;padding:18px 22px}
+    .map .cell{padding:18px 22px;font-size:26px;color:var(--ink);border-top:1px solid var(--line-soft)}
+    .map .cell code{font-size:.92em;color:var(--blue-700)}
+
+    /* Concerns row (5 cards) */
+    .concerns{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:32px}
+    .concerns .c{border:1px solid var(--line);border-radius:14px;padding:24px 22px;background:var(--bg);box-shadow:var(--shadow-sm);min-height:180px}
+    .concerns .c .ic{width:42px;height:42px;border-radius:10px;background:var(--blue-50);display:flex;align-items:center;justify-content:center;color:var(--blue-700);margin-bottom:14px;font-size:22px;font-weight:700}
+    .concerns .c h4{font-size:24px;margin:0 0 8px;color:var(--ink);font-weight:700}
+    .concerns .c p{font-size:18px;color:var(--ink-soft);margin:0;line-height:1.4}
+
+    /* Production architecture (CSS replica of drawio) */
+    .prod{position:relative;margin-top:24px;border:2px dashed var(--blue-500);border-radius:18px;padding:26px;background:linear-gradient(180deg,#fff,var(--blue-50))}
+    .prod .applabel{position:absolute;top:-14px;left:24px;background:var(--bg);padding:0 14px;color:var(--blue-700);font-size:18px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    .prod .row{display:flex;align-items:stretch;gap:20px}
+    .prod .userbox{flex:0 0 110px;display:flex;align-items:center;justify-content:center;background:var(--violet-50);border:1px solid var(--violet-500);border-radius:14px;padding:14px;font-size:22px;font-weight:600;color:#6d28d9}
+    .prod .corecol{flex:1;border:2px solid var(--blue-500);border-radius:14px;padding:18px 16px;background:#fff}
+    .prod .corecol .clabel{font-size:16px;font-weight:700;color:var(--blue-700);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+    .prod .pipe2{display:flex;gap:6px}
+    .prod .pipe2 .pn{flex:1;background:var(--blue-50);border:1px solid var(--blue-500);border-radius:8px;padding:12px 8px;font-size:17px;font-weight:600;color:var(--ink);text-align:center;line-height:1.2}
+    .prod .pipe2 .pn.safe{background:var(--red-50);border-color:var(--red-500);color:#991b1b}
+    .prod .dbbox{flex:0 0 130px;display:flex;align-items:center;justify-content:center;background:var(--green-50);border:1px solid var(--green-500);border-radius:14px;padding:14px;font-size:22px;font-weight:600;color:#047857}
+    .prod .ctxrow,.prod .obsrow{margin-top:18px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+    .prod .ctxlbl,.prod .obslbl{font-size:16px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:10px 14px;border-radius:10px}
+    .prod .ctxlbl{background:#fef3c7;color:#92400e;border:1px solid var(--amber-500)}
+    .prod .obslbl{background:var(--violet-50);color:#6d28d9;border:1px solid var(--violet-500)}
+    .prod .ctxitems,.prod .obsitems{display:flex;gap:12px;flex-wrap:wrap}
+    .prod .ctxitems span{background:#fff;border:1px solid var(--amber-500);color:#92400e;border-radius:8px;padding:10px 14px;font-size:18px;font-weight:600}
+    .prod .obsitems span{background:#fff;border:1px solid var(--violet-500);color:#6d28d9;border-radius:8px;padding:10px 14px;font-size:18px;font-weight:600}
+    .prod-cap{margin-top:18px;font-size:22px;color:var(--ink-soft);text-align:center;font-style:italic}
+
+    /* Layer cards (object grid) */
+    .layers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:28px}
+    .layers .l{border:1px solid var(--line);border-radius:14px;padding:24px 22px;background:var(--bg);box-shadow:var(--shadow-sm)}
+    .layers .l .ttl{font-size:26px;font-weight:700;color:var(--ink);margin-bottom:10px}
+    .layers .l .mods{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;color:var(--blue-700);line-height:1.6}
+    .layers .l p{font-size:20px;color:var(--ink-soft);margin:10px 0 0;line-height:1.45}
+    .layers .l.app{background:linear-gradient(180deg,#fff,var(--violet-50));border-color:var(--violet-500)}
+    .layers .l.core{background:linear-gradient(180deg,#fff,var(--blue-50));border-color:var(--blue-500)}
+    .layers .l.ctx{background:linear-gradient(180deg,#fff,#fef3c7);border-color:var(--amber-500)}
+    .layers .l.safe{background:linear-gradient(180deg,#fff,var(--red-50));border-color:var(--red-500)}
+    .layers .l.rel{background:linear-gradient(180deg,#fff,var(--green-50));border-color:var(--green-500)}
+    .layers .l.obs{background:linear-gradient(180deg,#fff,#f0f9ff);border-color:var(--teal-500)}
+
+    /* Big quote */
+    .bigquote{margin-top:36px;text-align:center;max-width:1300px;margin-left:auto;margin-right:auto}
+    .bigquote .qmark{font-size:160px;color:var(--blue-100);line-height:.4;font-family:Georgia,serif;display:block;margin-bottom:0}
+    .bigquote .qtext{font-size:54px;line-height:1.25;color:var(--ink);font-weight:600;letter-spacing:-.01em;margin:0}
+    .bigquote .qtext em{font-style:normal;background:linear-gradient(90deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+    .bigquote .qfoot{margin-top:22px;font-size:24px;color:var(--ink-soft)}
+
+    /* Three context layers diagram */
+    .ctxdiag{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;align-items:center;margin-top:36px}
+    .ctxdiag .stack{display:flex;flex-direction:column;gap:14px}
+    .ctxdiag .layer{border-radius:12px;padding:16px 18px;font-size:22px;font-weight:600;text-align:center;line-height:1.25}
+    .ctxdiag .layer.l1{background:var(--blue-50);border:1px solid var(--blue-500);color:var(--blue-700)}
+    .ctxdiag .layer.l2{background:var(--green-50);border:1px solid var(--green-500);color:#047857}
+    .ctxdiag .layer.l3{background:#fef3c7;border:1px solid var(--amber-500);color:#92400e}
+    .ctxdiag .layer .sub{display:block;font-size:16px;font-weight:500;color:var(--ink-soft);margin-top:6px}
+    .ctxdiag .arrow{display:flex;align-items:center;justify-content:center;color:var(--ink-soft);padding:0 8px}
+    .ctxdiag .arrow svg{width:34px;height:34px}
+    .ctxdiag .pt{background:linear-gradient(180deg,#fff,var(--bg-soft));border:2px solid var(--ink-soft);border-radius:18px;padding:30px 24px;text-align:center}
+    .ctxdiag .pt .lbl{font-size:18px;font-weight:700;color:var(--ink-soft);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+    .ctxdiag .pt .name{font-size:30px;font-weight:700;color:var(--ink)}
+    .ctxdiag .llmbox{background:linear-gradient(180deg,#fff,var(--violet-50));border:2px solid var(--violet-500);border-radius:18px;padding:30px 24px;text-align:center}
+    .ctxdiag .llmbox .lbl{font-size:18px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6d28d9;margin-bottom:8px}
+    .ctxdiag .llmbox .name{font-size:30px;font-weight:700;color:#6d28d9}
+
+    /* SVG diagram surface */
+    .svg-diag{display:block;width:100%;max-width:1520px;height:auto;max-height:660px;margin:16px auto 0}
+    @keyframes dashflow{to{stroke-dashoffset:-32}}
+    .svg-diag .flow{stroke-dasharray:8 6;animation:dashflow 2s linear infinite}
+    .svg-diag .flow.slow{animation-duration:3s}
+
+    /* Layer detail (sidebar + content) */
+    .ldetail{display:grid;grid-template-columns:auto 1fr;gap:32px;margin-top:24px;align-items:flex-start}
+    .ldetail .num{font-size:120px;font-weight:800;line-height:.9;letter-spacing:-.04em;
+      background:linear-gradient(180deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent;min-width:140px}
+    .ldetail .content h3{font-size:36px;margin:0 0 14px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
+    .ldetail .content p{font-size:24px;color:var(--ink-soft);margin:0 0 14px;line-height:1.5;max-width:1200px}
+    .ldetail .content code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;color:var(--blue-700);background:var(--bg-soft);padding:2px 8px;border-radius:5px;border:1px solid var(--line)}
+    .ldetail .control{display:inline-block;background:var(--blue-50);border:1px solid var(--blue-500);color:var(--blue-700);padding:10px 16px;border-radius:8px;font-size:20px;font-weight:600;margin-top:10px}
+
+    /* Demo cue */
+    .democue{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:center;margin-top:32px}
+    .democue .badge{
+      width:140px;height:140px;border-radius:50%;
+      background:linear-gradient(135deg,var(--blue-600),var(--teal-500));
+      display:flex;align-items:center;justify-content:center;color:#fff;font-size:60px;font-weight:700;
+      box-shadow:0 12px 32px rgba(37,99,235,.35);
+    }
+    .democue .text h3{font-size:42px;margin:0 0 10px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
+    .democue .text p{font-size:26px;color:var(--ink-soft);margin:0 0 10px;line-height:1.45}
+    .democue .text code{font-size:.92em;color:var(--blue-700);background:var(--bg-soft);padding:3px 10px;border-radius:6px;border:1px solid var(--line)}
+
+    /* Three guardrails grid */
+    .guards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:32px}
+    .guards .g{border:1px solid var(--line);border-radius:16px;padding:28px 26px;background:var(--bg);box-shadow:var(--shadow-sm)}
+    .guards .g.admin{background:linear-gradient(180deg,#fff,var(--blue-50));border-color:var(--blue-500)}
+    .guards .g.valid{background:linear-gradient(180deg,#fff,var(--amber-50));border-color:var(--amber-500)}
+    .guards .g.limit{background:linear-gradient(180deg,#fff,var(--green-50));border-color:var(--green-500)}
+    .guards .g .num{font-size:18px;font-weight:700;letter-spacing:.16em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:8px}
+    .guards .g h4{font-size:30px;margin:0 0 12px;color:var(--ink);font-weight:700;letter-spacing:-.01em;line-height:1.2}
+    .guards .g p{font-size:22px;color:var(--ink-soft);margin:0;line-height:1.45}
+    .guards .g code{font-size:.85em;color:var(--blue-700)}
+
+    /* Sample queries table */
+    .qtable{width:100%;margin-top:22px;border-collapse:collapse;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:22px}
+    .qtable th{background:var(--bg-soft);padding:16px 18px;text-align:left;font-size:18px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--line)}
+    .qtable td{padding:16px 18px;color:var(--ink);border-top:1px solid var(--line-soft);vertical-align:top;line-height:1.4}
+    .qtable .out{font-weight:600}
+    .qtable .out.bad{color:#b91c1c}
+    .qtable .out.good{color:#047857}
+    .qtable code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;color:var(--blue-700);background:var(--bg-soft);padding:2px 8px;border-radius:5px;border:1px solid var(--line)}
+
+    /* Results table (Topic 05) */
+    .rtable{width:100%;margin-top:22px;border-collapse:collapse;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:24px}
+    .rtable th{background:var(--bg-soft);padding:18px 20px;text-align:left;font-size:18px;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+    .rtable td{padding:14px 20px;color:var(--ink);border-top:1px solid var(--line-soft);vertical-align:middle;line-height:1.3}
+    .rtable td code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;color:var(--blue-700)}
+    .rtable .top{background:var(--green-50)}
+    .rtable .top td{font-weight:600}
+    .rtable .bad{background:var(--red-50);color:#991b1b}
+    .rtable .bad td{color:#991b1b}
+
+    /* Charts callout grid */
+    .charts{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}
+    .charts .ch{border:1px solid var(--line);border-radius:14px;padding:22px 22px;background:var(--bg);box-shadow:var(--shadow-sm)}
+    .charts .ch .name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;color:var(--blue-700);margin-bottom:10px;word-break:break-all}
+    .charts .ch h4{font-size:24px;margin:0 0 8px;color:var(--ink);font-weight:700}
+    .charts .ch p{font-size:20px;color:var(--ink-soft);margin:0;line-height:1.45}
+
+    /* Practices list */
+    .practices{margin-top:28px;display:flex;flex-direction:column;gap:18px}
+    .practices .p{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:flex-start;padding:22px 24px;border:1px solid var(--line);border-radius:14px;background:var(--bg);box-shadow:var(--shadow-sm)}
+    .practices .p .n{font-size:48px;font-weight:800;line-height:1;
+      background:linear-gradient(180deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent;min-width:60px}
+    .practices .p .t h4{font-size:26px;margin:0 0 6px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
+    .practices .p .t p{font-size:22px;margin:0;color:var(--ink-soft);line-height:1.45}
+
+    /* Closing */
+    .closing{text-align:center}
+    .closing .hand{font-size:108px;line-height:1;background:linear-gradient(90deg,var(--blue-600),var(--teal-500));
+      -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;letter-spacing:-.02em;margin-bottom:18px}
+
+    /* responsive */
+    @media (max-width:1200px){
+      .slide{padding:36px 32px 56px}
+      h1.title{font-size:64px}h2.h{font-size:44px}
+      h3.sub{font-size:24px}p.lead{font-size:24px}
+      .title-art{display:none}
+      .agenda,.layers,.guards,.charts,.concerns{grid-template-columns:1fr 1fr}
+      .pipe{flex-wrap:wrap}.pipe .arrow{display:none}
+      .ctxdiag{grid-template-columns:1fr}.ctxdiag .arrow{transform:rotate(90deg);padding:6px 0}
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+
+  <main class="deck" id="deck">
+
+    <!-- ============================================================
+         SECTION A · OPENING
+         ============================================================ -->
+
+    <!-- 1. TITLE -->
+    <section class="slide active" style="position:absolute;overflow:hidden;">
+      <svg class="title-art" viewBox="0 0 880 880" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="ga" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity=".22"/>
+            <stop offset="100%" stop-color="#0ea5e9" stop-opacity=".06"/>
+          </linearGradient>
+        </defs>
+        <g transform="translate(120 120)">
+          <rect x="0" y="0" width="640" height="180" rx="22" fill="url(#ga)"/>
+          <rect x="60" y="220" width="520" height="180" rx="22" fill="url(#ga)" opacity=".8"/>
+          <rect x="120" y="440" width="400" height="180" rx="22" fill="url(#ga)" opacity=".55"/>
+        </g>
+      </svg>
+      <div class="wrap title-wrap">
+        <p class="eyebrow">Workshop · 90 min</p>
+        <h1 class="title">SQL AI Agents <span class="accent">in Production</span></h1>
+        <h3 class="sub">From notebook demo to a system you can trust in production.</h3>
+        <p class="branding">SQL AI Agents in Production · Workshop</p>
+      </div>
+    </section>
+
+    <!-- 2. ABOUT THIS WORKSHOP -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">About this workshop</p>
+        <h2 class="h">90 minutes, end to end.</h2>
+        <p class="lead">For data and ML engineers comfortable with Python and SQL who've called an LLM API at least once. No prior agent experience required.</p>
+
+        <div class="layers" style="grid-template-columns:repeat(2,1fr)">
+          <div class="l core">
+            <div class="ttl">What you'll leave with</div>
+            <p>The line between a single LLM call and an orchestrated SQL AI agent. What a production agent's components are, and which lever — context, guardrails, model — moves quality the most.</p>
+          </div>
+          <div class="l ctx">
+            <div class="ttl">How we'll spend the time</div>
+            <p>Three demos against a real repo (`notebook/02`, `app/agent_app.py`, and the eval results). Five concept sections in between. Q&amp;A at the end.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. AGENDA -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Agenda</p>
+        <h2 class="h">Six topics, one deck.</h2>
+
+        <div class="agenda">
+          <div class="item">
+            <div class="num">Topic 01</div>
+            <div class="ttl">What is a SQL AI Agent?</div>
+            <div class="time">15 min · demo</div>
+          </div>
+          <div class="item">
+            <div class="num">Topic 02</div>
+            <div class="ttl">SQL AI Agent in Production</div>
+            <div class="time">10 min</div>
+          </div>
+          <div class="item">
+            <div class="num">Topic 03</div>
+            <div class="ttl">Context is Everything</div>
+            <div class="time">12 min · demo</div>
+          </div>
+          <div class="item">
+            <div class="num">Topic 04</div>
+            <div class="ttl">SQL AI Agent Guardrails</div>
+            <div class="time">10 min · demo</div>
+          </div>
+          <div class="item">
+            <div class="num">Topic 05</div>
+            <div class="ttl">Model Performance &amp; Evaluation</div>
+            <div class="time">15 min · demo</div>
+          </div>
+          <div class="item">
+            <div class="num">Topic 06</div>
+            <div class="ttl">Best Practices</div>
+            <div class="time">8 min · recap</div>
+          </div>
+          <div class="item qa" style="grid-column:1 / -1;min-height:90px;flex-direction:row;align-items:center;justify-content:space-between">
+            <div class="ttl" style="font-size:28px">Q&amp;A</div>
+            <div class="time" style="margin-top:0;border-top:none;padding-top:0">10 min</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION B · TOPIC 01 — WHAT IS A SQL AI AGENT?
+         ============================================================ -->
+
+    <!-- 4. SECTION DIVIDER · TOPIC 01 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 01 · 15 min</p>
+        <h2 class="h">What is a <span class="accent">SQL AI Agent</span>?</h2>
+        <h3 class="sub">More than a single LLM call. A pipeline that turns a question into a row of data.</h3>
+      </div>
+    </section>
+
+    <!-- 5. PROMPT vs. AGENT (before / after) -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 01 · prompt vs. agent</p>
+        <h2 class="h">One LLM call ≠ a SQL AI agent.</h2>
+
+        <div class="ba">
+          <div class="col bad">
+            <div class="lbl">✗ Just a prompt</div>
+            <h4>Single LLM call</h4>
+            <ul>
+              <li>Returns text — not rows.</li>
+              <li>Doesn't know the schema.</li>
+              <li>Doesn't run the SQL.</li>
+              <li>If the SQL is broken, nothing tells us.</li>
+            </ul>
+            <div class="note">Useful as a step. Not a system.</div>
+          </div>
+          <div class="col good">
+            <div class="lbl">✓ SQL AI agent</div>
+            <h4>Orchestrated pipeline</h4>
+            <ul>
+              <li>Builds a prompt that includes the schema.</li>
+              <li>Calls the LLM, then parses the response.</li>
+              <li>Runs the query against the database.</li>
+              <li>Hands rows back to the user.</li>
+            </ul>
+            <div class="note">One LLM call is one step inside the loop.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. SEVEN-COMPONENT PIPELINE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 01 · the pipeline</p>
+        <h2 class="h">Seven components, in order.</h2>
+
+        <svg class="svg-diag" viewBox="0 0 1600 560" xmlns="http://www.w3.org/2000/svg" aria-labelledby="pipe-title">
+          <title id="pipe-title">The seven-component SQL AI agent pipeline</title>
+          <defs>
+            <linearGradient id="pipe-bg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#f5f3ff"/>
+              <stop offset="50%" stop-color="#eff6ff"/>
+              <stop offset="100%" stop-color="#ecfdf5"/>
+            </linearGradient>
+            <linearGradient id="pipe-llm" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#0ea5e9"/>
+            </linearGradient>
+            <linearGradient id="pipe-user" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f5f3ff"/>
+            </linearGradient>
+            <linearGradient id="pipe-db" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#ecfdf5"/>
+            </linearGradient>
+            <linearGradient id="pipe-step" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f8fafc"/>
+            </linearGradient>
+            <filter id="pipe-shadow" x="-15%" y="-15%" width="130%" height="130%">
+              <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#0f172a" flood-opacity=".12"/>
+            </filter>
+            <filter id="pipe-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <marker id="pipe-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+            </marker>
+          </defs>
+
+          <!-- soft background flow band -->
+          <rect x="40" y="180" width="1520" height="180" rx="90" fill="url(#pipe-bg)" opacity=".55"/>
+
+          <!-- Connection paths first (behind nodes) -->
+          <g stroke="#475569" stroke-width="3" fill="none" stroke-linecap="round" marker-end="url(#pipe-arrow)">
+            <path class="flow" d="M 195 270 L 235 270" opacity=".55"/>
+            <path class="flow" d="M 395 270 L 435 270" opacity=".55"/>
+            <path class="flow" d="M 595 270 L 635 270" opacity=".55"/>
+            <path class="flow" d="M 815 270 L 855 270" opacity=".55"/>
+            <path class="flow" d="M 1015 270 L 1055 270" opacity=".55"/>
+            <path class="flow" d="M 1215 270 L 1255 270" opacity=".55"/>
+            <path class="flow" d="M 1415 270 L 1455 270" opacity=".55"/>
+          </g>
+
+          <!-- Node 1: User question -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="40" y="190" width="160" height="160" rx="20" fill="url(#pipe-user)" stroke="#8b5cf6" stroke-width="2.5"/>
+          </g>
+          <g transform="translate(96 218)" stroke="#6d28d9" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="24" cy="14" r="10"/>
+            <path d="M6 44c0-10 8-16 18-16s18 6 18 16"/>
+          </g>
+          <text x="120" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#6d28d9">STEP 01</text>
+          <text x="120" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">User question</text>
+
+          <!-- Node 2: Prompt template -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="240" y="190" width="160" height="160" rx="20" fill="url(#pipe-step)" stroke="#cbd5e1" stroke-width="2"/>
+          </g>
+          <g transform="translate(296 216)" fill="none" stroke="#1d4ed8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="44" height="50" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+            <path d="M10 12h28M10 22h28M10 32h20"/>
+          </g>
+          <text x="320" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#475569">STEP 02</text>
+          <text x="320" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">Prompt template</text>
+
+          <!-- Node 3: API handler -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="440" y="190" width="160" height="160" rx="20" fill="url(#pipe-step)" stroke="#cbd5e1" stroke-width="2"/>
+          </g>
+          <g transform="translate(496 220)" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round">
+            <path d="M0 24h12M36 24h12"/>
+            <rect x="14" y="10" width="22" height="28" rx="5" fill="#f1f5f9"/>
+            <path d="M19 20h12M19 28h8"/>
+          </g>
+          <text x="520" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#475569">STEP 03</text>
+          <text x="520" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">API handler</text>
+
+          <!-- Node 4: LLM API (highlighted) -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="640" y="170" width="180" height="200" rx="22" fill="url(#pipe-llm)"/>
+          </g>
+          <g transform="translate(710 200)" fill="#fff" opacity=".95">
+            <path d="M22 0 L4 28 L18 28 L12 56 L40 24 L26 24 z"/>
+          </g>
+          <text x="730" y="296" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#fff" opacity=".85">STEP 04</text>
+          <text x="730" y="324" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="24" fill="#fff">LLM API</text>
+          <text x="730" y="348" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#fff" opacity=".75">gemma4:100k</text>
+
+          <!-- Node 5: Parse the response -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="860" y="190" width="160" height="160" rx="20" fill="url(#pipe-step)" stroke="#cbd5e1" stroke-width="2"/>
+          </g>
+          <g transform="translate(916 220)" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 6 L4 24 L14 24 L8 42 L24 22 L14 22 z" fill="#fef3c7" stroke="#f59e0b"/>
+            <path d="M30 12l8 8-8 8" stroke="#f59e0b"/>
+          </g>
+          <text x="940" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#475569">STEP 05</text>
+          <text x="940" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">Parse response</text>
+
+          <!-- Node 6: DB handler -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="1060" y="190" width="160" height="160" rx="20" fill="url(#pipe-step)" stroke="#cbd5e1" stroke-width="2"/>
+          </g>
+          <g transform="translate(1116 220)" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round">
+            <ellipse cx="24" cy="10" rx="20" ry="6" fill="#d1fae5"/>
+            <path d="M4 10v32a20 6 0 0040 0V10" fill="#d1fae5"/>
+            <path d="M4 22a20 6 0 0040 0M4 34a20 6 0 0040 0"/>
+          </g>
+          <text x="1140" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#475569">STEP 06</text>
+          <text x="1140" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">DB handler</text>
+
+          <!-- Node 7: Send query -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="1260" y="190" width="160" height="160" rx="20" fill="url(#pipe-step)" stroke="#cbd5e1" stroke-width="2"/>
+          </g>
+          <g transform="translate(1316 222)" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 22h28M22 12l10 10-10 10" stroke="#475569"/>
+            <rect x="34" y="6" width="14" height="32" rx="3" fill="#f8fafc"/>
+          </g>
+          <text x="1340" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#475569">STEP 07</text>
+          <text x="1340" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="22" fill="#0f172a">Send query</text>
+
+          <!-- Node 8: Return data -->
+          <g filter="url(#pipe-shadow)">
+            <rect x="1460" y="190" width="100" height="160" rx="20" fill="url(#pipe-db)" stroke="#10b981" stroke-width="2.5"/>
+          </g>
+          <g transform="translate(1486 218)" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round">
+            <rect x="2" y="2" width="46" height="44" rx="5" fill="#d1fae5"/>
+            <path d="M2 14h46M2 26h46M2 38h46M16 2v44M30 2v44"/>
+          </g>
+          <text x="1510" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2.5" fill="#047857">RESULT</text>
+          <text x="1510" y="328" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="20" fill="#0f172a">Data</text>
+
+          <!-- File-path captions under steps 2, 5, 6 -->
+          <text x="320" y="402" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#94a3b8">prompt_handler.py</text>
+          <text x="940" y="402" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#94a3b8">parse_query.py</text>
+          <text x="1140" y="402" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#94a3b8">db_handler.py</text>
+
+          <!-- Top label band -->
+          <text x="800" y="80" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="18" letter-spacing="3" fill="#1d4ed8">USER · PIPELINE · DATA</text>
+          <text x="800" y="110" text-anchor="middle" font-family="Inter,sans-serif" font-style="italic" font-size="20" fill="#475569">One LLM call is one step inside the loop — not the whole thing.</text>
+
+          <!-- Phase brackets -->
+          <g stroke="#cbd5e1" stroke-width="1.5" fill="none">
+            <path d="M 40 460 L 200 460" stroke-dasharray="4 4"/>
+            <path d="M 240 460 L 820 460" stroke-dasharray="4 4"/>
+            <path d="M 860 460 L 1560 460" stroke-dasharray="4 4"/>
+          </g>
+          <text x="120" y="492" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2" fill="#94a3b8">INPUT</text>
+          <text x="530" y="492" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2" fill="#94a3b8">PROMPT → LLM</text>
+          <text x="1210" y="492" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2" fill="#94a3b8">EXECUTE → RETURN</text>
+        </svg>
+
+        <div class="pipe-cap" style="margin-top:14px">Same components on every modern SQL agent — names vary, shape doesn't.</div>
+      </div>
+    </section>
+
+    <!-- 7. COMPONENTS → REPO FILES -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 01 · where each piece lives</p>
+        <h2 class="h">From diagram to code.</h2>
+
+        <div class="map">
+          <div class="head">Component</div>
+          <div class="head">Where it lives in the repo</div>
+          <div class="cell">Prompt template</div>
+          <div class="cell"><code>sql_ai_agent/prompt_handler.py · set_prompt_template()</code></div>
+          <div class="cell">API handler</div>
+          <div class="cell"><code>ChatOpenAI</code> client → Docker Model Runner</div>
+          <div class="cell">LLM API</div>
+          <div class="cell"><code>gemma4:100k</code> via <code>http://model-runner.docker.internal/engines/v1</code></div>
+          <div class="cell">Parse the response</div>
+          <div class="cell"><code>sql_ai_agent/parse_query.py · is_markdown_code_chunk · extract_code_from_markdown</code></div>
+          <div class="cell">DB handler</div>
+          <div class="cell"><code>sql_ai_agent/db_handler.py · get_tbl_attr · query_execute</code> + Ibis connection</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. DEMO CUE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 01 · demo</p>
+        <h2 class="h">Let's see it run.</h2>
+
+        <div class="democue">
+          <div class="badge">▶</div>
+          <div class="text">
+            <h3>notebook/02_simple_sql_ai_agent.ipynb</h3>
+            <p>Eleven cells. Seven components. One question:</p>
+            <p><code>"How many passengers landed during 2024?"</code></p>
+            <p style="margin-top:18px;font-size:22px;color:var(--ink-soft)">Watch for two things: the schema is the agent's only knowledge of the table, and there's no safety net.</p>
+          </div>
+        </div>
+
+<pre class="code" style="margin-top:32px"><span class="c"># the entire agent — three lines once everything is wired</span>
+chain = prompt_template | llm
+output = chain.invoke({<span class="s">"question"</span>: q, <span class="s">"tbl_name"</span>: tbl, <span class="s">"schema"</span>: schema})
+con.sql(output.content).execute()</pre>
+      </div>
+    </section>
+
+    <!-- 9. TOPIC 01 TAKEAWAY -->
+    <section class="slide">
+      <div class="wrap" style="text-align:center">
+        <p class="eyebrow">Topic 01 · takeaway</p>
+        <h2 class="h" style="margin-bottom:6px">A SQL AI agent is the seven-component pipeline, wired together.</h2>
+        <h3 class="sub" style="margin:0 auto 18px">One LLM call is one step inside that loop.</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">user question</code> ·
+            <code class="inline">prompt template</code> ·
+            <code class="inline">API handler</code> ·
+            <code class="inline">LLM</code> ·
+            <code class="inline">parse</code> ·
+            <code class="inline">DB handler</code> ·
+            <code class="inline">return data</code>
+          </div>
+          <div class="foot">Next → Topic 02 · what changes when this moves to production.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION C · TOPIC 02 — IN PRODUCTION
+         ============================================================ -->
+
+    <!-- 10. SECTION DIVIDER · TOPIC 02 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 02 · 10 min</p>
+        <h2 class="h">SQL AI Agent <span class="accent">in Production</span>.</h2>
+        <h3 class="sub">Same pipeline at the core. New layers around it.</h3>
+      </div>
+    </section>
+
+    <!-- 11. FROM NOTEBOOK TO PRODUCTION (5 concerns) -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 02 · what "production" means</p>
+        <h2 class="h">More concerns, not more code.</h2>
+        <p class="lead">The seven-component pipeline still works. Production wraps five concerns around it.</p>
+
+        <div class="concerns">
+          <div class="c"><div class="ic">✓</div><h4>Correctness</h4><p>What happens when the model returns broken SQL?</p></div>
+          <div class="c"><div class="ic">⛨</div><h4>Safety</h4><p>What happens when it returns a destructive statement?</p></div>
+          <div class="c"><div class="ic">◎</div><h4>Observability</h4><p>How do we know what happened overnight?</p></div>
+          <div class="c"><div class="ic">$</div><h4>Cost</h4><p>Are we over-spec for the questions our users actually ask?</p></div>
+          <div class="c"><div class="ic">↻</div><h4>Evolvability</h4><p>How hard is it to swap the provider or add a domain?</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. PRODUCTION ARCHITECTURE DIAGRAM -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 02 · production architecture</p>
+        <h2 class="h">Topic 01's pipeline at the core.</h2>
+
+        <svg class="svg-diag" viewBox="0 0 1600 640" xmlns="http://www.w3.org/2000/svg" aria-labelledby="prod-title" style="max-height:560px">
+          <title id="prod-title">Production architecture: pipeline core wrapped by application, context, safety, reliability, and observability layers</title>
+          <defs>
+            <linearGradient id="prod-app" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#eff6ff"/>
+            </linearGradient>
+            <linearGradient id="prod-core" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f8fafc"/>
+            </linearGradient>
+            <linearGradient id="prod-step" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#dbeafe"/><stop offset="100%" stop-color="#bfdbfe"/>
+            </linearGradient>
+            <linearGradient id="prod-safe" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fee2e2"/><stop offset="100%" stop-color="#fecaca"/>
+            </linearGradient>
+            <linearGradient id="prod-ctx" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fef3c7"/><stop offset="100%" stop-color="#fde68a"/>
+            </linearGradient>
+            <linearGradient id="prod-obs" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f5f3ff"/><stop offset="100%" stop-color="#ede9fe"/>
+            </linearGradient>
+            <linearGradient id="prod-db" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d1fae5"/><stop offset="100%" stop-color="#a7f3d0"/>
+            </linearGradient>
+            <linearGradient id="prod-user" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#f5f3ff"/>
+            </linearGradient>
+            <filter id="prod-shadow" x="-15%" y="-15%" width="130%" height="130%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0f172a" flood-opacity=".12"/>
+            </filter>
+            <marker id="prod-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+            </marker>
+            <marker id="prod-arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+            </marker>
+            <marker id="prod-arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#d97706"/>
+            </marker>
+            <marker id="prod-arrow-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/>
+            </marker>
+          </defs>
+
+          <!-- App layer container (dashed) -->
+          <rect x="40" y="60" width="1520" height="440" rx="24" fill="url(#prod-app)" stroke="#3b82f6" stroke-width="2.5" stroke-dasharray="10 7"/>
+          <rect x="80" y="46" width="430" height="32" fill="#fff"/>
+          <text x="100" y="68" font-family="Inter,sans-serif" font-weight="700" font-size="16" letter-spacing="3" fill="#1d4ed8">APPLICATION LAYER · STREAMLIT</text>
+          <text x="465" y="68" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#94a3b8">app/agent_app.py</text>
+
+          <!-- User -->
+          <g filter="url(#prod-shadow)">
+            <rect x="80" y="200" width="120" height="120" rx="16" fill="url(#prod-user)" stroke="#8b5cf6" stroke-width="2.5"/>
+          </g>
+          <g transform="translate(118 224)" stroke="#6d28d9" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="22" cy="14" r="10"/>
+            <path d="M4 44c0-10 8-16 18-16s18 6 18 16"/>
+          </g>
+          <text x="140" y="304" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="20" fill="#0f172a">User</text>
+
+          <!-- Agent core container -->
+          <rect x="240" y="170" width="980" height="180" rx="18" fill="#fff" stroke="#3b82f6" stroke-width="3"/>
+          <rect x="280" y="156" width="240" height="28" fill="#fff"/>
+          <text x="300" y="175" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2.5" fill="#1d4ed8">AGENT CORE · SqlAgent</text>
+
+          <!-- Agent core sub-pipeline -->
+          <g filter="url(#prod-shadow)">
+            <rect x="260" y="210" width="160" height="100" rx="12" fill="url(#prod-step)" stroke="#3b82f6" stroke-width="1.5"/>
+          </g>
+          <text x="340" y="248" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#1d4ed8">PROMPT</text>
+          <text x="340" y="276" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="18" fill="#0f172a">assembly</text>
+          <text x="340" y="298" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#475569">prompt_handler.py</text>
+
+          <g filter="url(#prod-shadow)">
+            <rect x="440" y="210" width="160" height="100" rx="12" fill="url(#prod-step)" stroke="#3b82f6" stroke-width="1.5"/>
+          </g>
+          <text x="520" y="248" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#1d4ed8">API</text>
+          <text x="520" y="276" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="18" fill="#0f172a">LLM call</text>
+          <text x="520" y="298" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#475569">ChatOpenAI · fallback</text>
+
+          <g filter="url(#prod-shadow)">
+            <rect x="620" y="210" width="160" height="100" rx="12" fill="url(#prod-step)" stroke="#3b82f6" stroke-width="1.5"/>
+          </g>
+          <text x="700" y="248" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#1d4ed8">PARSE</text>
+          <text x="700" y="276" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="18" fill="#0f172a">strip fences</text>
+          <text x="700" y="298" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#475569">parse_query.py</text>
+
+          <g filter="url(#prod-shadow)">
+            <rect x="800" y="210" width="160" height="100" rx="12" fill="url(#prod-safe)" stroke="#dc2626" stroke-width="2"/>
+          </g>
+          <text x="880" y="248" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#991b1b">VALIDATE</text>
+          <text x="880" y="276" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="18" fill="#0f172a">SQL guards</text>
+          <text x="880" y="298" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#991b1b">sql_validator.py</text>
+
+          <g filter="url(#prod-shadow)">
+            <rect x="980" y="210" width="160" height="100" rx="12" fill="url(#prod-step)" stroke="#3b82f6" stroke-width="1.5"/>
+          </g>
+          <text x="1060" y="248" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#1d4ed8">DB HANDLER</text>
+          <text x="1060" y="276" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="18" fill="#0f172a">execute</text>
+          <text x="1060" y="298" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#475569">db_handler.py · Ibis</text>
+
+          <!-- Forward arrows inside core -->
+          <g stroke="#475569" stroke-width="2.5" fill="none" stroke-linecap="round" marker-end="url(#prod-arrow)">
+            <path d="M 200 260 L 255 260"/>
+            <path d="M 420 260 L 435 260"/>
+            <path d="M 600 260 L 615 260"/>
+            <path d="M 780 260 L 795 260"/>
+            <path d="M 960 260 L 975 260"/>
+            <path d="M 1140 260 L 1255 260"/>
+          </g>
+
+          <!-- Database (cylinder) -->
+          <g filter="url(#prod-shadow)">
+            <ellipse cx="1320" cy="200" rx="60" ry="14" fill="url(#prod-db)" stroke="#10b981" stroke-width="2.5"/>
+            <path d="M 1260 200 L 1260 320 A 60 14 0 0 0 1380 320 L 1380 200" fill="url(#prod-db)" stroke="#10b981" stroke-width="2.5"/>
+            <ellipse cx="1320" cy="200" rx="60" ry="14" fill="none" stroke="#10b981" stroke-width="2.5"/>
+            <ellipse cx="1320" cy="240" rx="60" ry="14" fill="none" stroke="#10b981" stroke-width="1.5" opacity=".5"/>
+            <ellipse cx="1320" cy="280" rx="60" ry="14" fill="none" stroke="#10b981" stroke-width="1.5" opacity=".5"/>
+          </g>
+          <text x="1320" y="356" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="20" fill="#047857">Database</text>
+          <text x="1320" y="378" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="#10b981">Postgres · Ibis</text>
+
+          <!-- Dashed retry edge from DB back into Agent core (reliability) -->
+          <path d="M 1280 188 C 1180 130, 540 130, 510 200" stroke="#dc2626" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="8 6" marker-end="url(#prod-arrow-red)"/>
+          <text x="900" y="118" text-anchor="middle" font-family="Inter,sans-serif" font-style="italic" font-size="14" fill="#dc2626">RETRY · debug agent → fallback model</text>
+
+          <!-- Context layer (rail attached underneath, feeding prompt assembly) -->
+          <rect x="240" y="380" width="540" height="100" rx="14" fill="url(#prod-ctx)" stroke="#f59e0b" stroke-width="2"/>
+          <text x="262" y="410" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2.5" fill="#92400e">CONTEXT LAYER</text>
+          <g font-family="Inter,sans-serif" font-weight="600" font-size="15" fill="#92400e">
+            <rect x="262" y="420" width="100" height="36" rx="8" fill="#fff" stroke="#f59e0b"/>
+            <text x="312" y="443" text-anchor="middle">schema</text>
+            <rect x="370" y="420" width="130" height="36" rx="8" fill="#fff" stroke="#f59e0b"/>
+            <text x="435" y="443" text-anchor="middle">distinct values</text>
+            <rect x="508" y="420" width="100" height="36" rx="8" fill="#fff" stroke="#f59e0b"/>
+            <text x="558" y="443" text-anchor="middle">skill file</text>
+            <rect x="616" y="420" width="100" height="36" rx="8" fill="#fff" stroke="#f59e0b"/>
+            <text x="666" y="443" text-anchor="middle">memory</text>
+          </g>
+          <path d="M 340 380 L 340 320" stroke="#d97706" stroke-width="2.5" fill="none" stroke-linecap="round" marker-end="url(#prod-arrow-amber)"/>
+
+          <!-- Observability rail (right side, attached to multiple components) -->
+          <rect x="800" y="380" width="420" height="100" rx="14" fill="url(#prod-obs)" stroke="#8b5cf6" stroke-width="2"/>
+          <text x="820" y="410" font-family="Inter,sans-serif" font-weight="700" font-size="14" letter-spacing="2.5" fill="#6d28d9">OBSERVABILITY LAYER</text>
+          <g font-family="Inter,sans-serif" font-weight="600" font-size="14" fill="#6d28d9">
+            <rect x="820" y="420" width="92" height="36" rx="8" fill="#fff" stroke="#8b5cf6"/>
+            <text x="866" y="443" text-anchor="middle">logger</text>
+            <rect x="918" y="420" width="100" height="36" rx="8" fill="#fff" stroke="#8b5cf6"/>
+            <text x="968" y="443" text-anchor="middle">callbacks</text>
+            <rect x="1024" y="420" width="120" height="36" rx="8" fill="#fff" stroke="#8b5cf6"/>
+            <text x="1084" y="443" text-anchor="middle">DB log handler</text>
+            <rect x="1150" y="420" width="60" height="36" rx="8" fill="#fff" stroke="#8b5cf6"/>
+            <text x="1180" y="443" text-anchor="middle">eval</text>
+          </g>
+          <!-- taps from agent core to observability -->
+          <g stroke="#7c3aed" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="4 4" marker-end="url(#prod-arrow-violet)" opacity=".7">
+            <path d="M 520 312 L 520 360 L 870 360 L 870 380"/>
+            <path d="M 880 312 L 880 380"/>
+            <path d="M 1060 312 L 1060 360 L 1090 360 L 1090 380"/>
+          </g>
+
+          <!-- Config note -->
+          <g filter="url(#prod-shadow)">
+            <rect x="80" y="380" width="140" height="100" rx="14" fill="#fffbeb" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5 4"/>
+          </g>
+          <text x="150" y="410" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="13" letter-spacing="2" fill="#475569">CONFIG</text>
+          <text x="150" y="438" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="600" font-size="14" fill="#0f172a">llm_config</text>
+          <text x="150" y="458" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="600" font-size="14" fill="#0f172a">.yaml</text>
+          <path d="M 220 414 L 280 250" stroke="#94a3b8" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="4 4"/>
+
+          <!-- User → app input arrow -->
+          <path class="flow" d="M 200 260 L 230 260" stroke="#475569" stroke-width="2.5" fill="none" stroke-linecap="round" marker-end="url(#prod-arrow)"/>
+
+          <!-- Bottom layer legend -->
+          <g transform="translate(40 540)" font-family="Inter,sans-serif" font-weight="700" font-size="14">
+            <g transform="translate(0 0)"><rect width="16" height="16" rx="3" fill="#bfdbfe"/><text x="22" y="13" fill="#1d4ed8">Agent core</text></g>
+            <g transform="translate(140 0)"><rect width="16" height="16" rx="3" fill="#fecaca"/><text x="22" y="13" fill="#991b1b">Safety</text></g>
+            <g transform="translate(240 0)"><rect width="16" height="16" rx="3" fill="#fde68a"/><text x="22" y="13" fill="#92400e">Context</text></g>
+            <g transform="translate(350 0)"><rect width="16" height="16" rx="3" fill="#ede9fe"/><text x="22" y="13" fill="#6d28d9">Observability</text></g>
+            <g transform="translate(500 0)"><rect width="16" height="16" rx="3" fill="#a7f3d0"/><text x="22" y="13" fill="#047857">Database</text></g>
+            <g transform="translate(630 0)" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4"><line x1="0" y1="8" x2="20" y2="8"/></g>
+            <text x="654" y="13" fill="#991b1b">Reliability · retry / fallback</text>
+          </g>
+        </svg>
+
+        <div class="prod-cap" style="margin-top:6px;font-size:20px">Same seven-component pipeline at the core. Five layers wrap it: application, context, safety, reliability, observability.</div>
+      </div>
+    </section>
+
+    <!-- 13. SIX LAYERS GRID -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 02 · the six layers</p>
+        <h2 class="h">Where each module lives.</h2>
+
+        <div class="layers" style="grid-template-columns:repeat(3,1fr)">
+          <div class="l app">
+            <div class="ttl">Application</div>
+            <div class="mods">app/agent_app.py</div>
+            <p>Streamlit UI. Renders results, exposes settings.</p>
+          </div>
+          <div class="l core">
+            <div class="ttl">Agent core</div>
+            <div class="mods">SqlAgent.py<br>parse_query.py<br>db_handler.py</div>
+            <p>Orchestrates prompt → API → parse → DB.</p>
+          </div>
+          <div class="l ctx">
+            <div class="ttl">Context</div>
+            <div class="mods">prompt_handler.py<br>skill_manager.py<br>InMemoryChatMessageHistory</div>
+            <p>Schema, distinct values, skill file, memory. Topic 03 opens it.</p>
+          </div>
+          <div class="l safe">
+            <div class="ttl">Safety</div>
+            <div class="mods">sql_validator.py</div>
+            <p>Read-only, multi-statement protection, LIMIT enforcement. Topic 04 opens it.</p>
+          </div>
+          <div class="l rel">
+            <div class="ttl">Reliability</div>
+            <div class="mods">debug retry loop<br>fallback model<br>llm_config.yaml</div>
+            <p>Re-prompt on failure; switch models when the primary fails.</p>
+          </div>
+          <div class="l obs">
+            <div class="ttl">Observability</div>
+            <div class="mods">logger.py · callbacks.py<br>log_database.py<br>testing/</div>
+            <p>Structured logs, token/timing capture, offline eval. Topic 05 opens it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14. TOPIC 02 TAKEAWAY -->
+    <section class="slide">
+      <div class="wrap" style="text-align:center">
+        <p class="eyebrow">Topic 02 · takeaway</p>
+        <h2 class="h" style="margin-bottom:6px">Production = the seven-component core + safety + reliability + observability.</h2>
+        <h3 class="sub" style="margin:0 auto 18px">Six layers, one orchestrator.</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">application</code> ·
+            <code class="inline">agent core</code> ·
+            <code class="inline">context</code> ·
+            <code class="inline">safety</code> ·
+            <code class="inline">reliability</code> ·
+            <code class="inline">observability</code>
+          </div>
+          <div class="foot">Next → Topic 03 · context is everything.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION D · TOPIC 03 — CONTEXT IS EVERYTHING
+         ============================================================ -->
+
+    <!-- 15. SECTION DIVIDER · TOPIC 03 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · 12 min</p>
+        <h2 class="h">Context is <span class="accent">everything</span>.</h2>
+        <h3 class="sub">The cheapest, biggest lever on agent quality.</h3>
+      </div>
+    </section>
+
+    <!-- 16. BIG QUOTE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · the claim</p>
+        <div class="bigquote">
+          <span class="qmark">"</span>
+          <p class="qtext">The same model with <em>better context</em> beats a bigger model with worse context.</p>
+          <div class="qfoot">Most agent failures aren't reasoning failures. They're context gaps.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17. THREE CONTEXT LAYERS DIAGRAM -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · three context layers</p>
+        <h2 class="h">Three layers, one prompt.</h2>
+
+        <svg class="svg-diag" viewBox="0 0 1600 720" xmlns="http://www.w3.org/2000/svg" aria-labelledby="ctx-title">
+          <title id="ctx-title">Three context layers feed the prompt template, which feeds the LLM</title>
+          <defs>
+            <linearGradient id="ctx-blue" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#dbeafe"/><stop offset="100%" stop-color="#bfdbfe"/>
+            </linearGradient>
+            <linearGradient id="ctx-green" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#d1fae5"/><stop offset="100%" stop-color="#a7f3d0"/>
+            </linearGradient>
+            <linearGradient id="ctx-amber" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#fef3c7"/><stop offset="100%" stop-color="#fde68a"/>
+            </linearGradient>
+            <linearGradient id="ctx-prompt" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f1f5f9"/>
+            </linearGradient>
+            <linearGradient id="ctx-llm" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6366f1"/>
+            </linearGradient>
+            <filter id="ctx-shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity=".14"/>
+            </filter>
+            <marker id="arrow-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#0f172a"/>
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#3b82f6"/>
+            </marker>
+            <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#10b981"/>
+            </marker>
+            <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+            </marker>
+            <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+            </marker>
+          </defs>
+
+          <!-- Layer 1 · Schema + distinct values -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="40" y="60" width="420" height="160" rx="20" fill="url(#ctx-blue)" stroke="#3b82f6" stroke-width="2"/>
+          </g>
+          <rect x="68" y="92" width="60" height="60" rx="12" fill="#3b82f6" opacity=".18"/>
+          <g stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" fill="none">
+            <path d="M82 110h32M82 122h32M82 134h32"/>
+            <path d="M92 102v40M104 102v40"/>
+          </g>
+          <text x="152" y="108" font-family="Inter,sans-serif" font-weight="700" font-size="28" fill="#0f172a">Schema +</text>
+          <text x="152" y="142" font-family="Inter,sans-serif" font-weight="700" font-size="28" fill="#0f172a">distinct values</text>
+          <text x="152" y="184" font-family="ui-monospace,Menlo,monospace" font-size="20" fill="#1d4ed8">db_handler.py</text>
+
+          <!-- Layer 2 · Skills -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="40" y="280" width="420" height="160" rx="20" fill="url(#ctx-green)" stroke="#10b981" stroke-width="2"/>
+          </g>
+          <rect x="68" y="312" width="60" height="60" rx="12" fill="#10b981" opacity=".18"/>
+          <g stroke="#047857" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M82 322h32v40H82z"/>
+            <path d="M88 332h22M88 342h22M88 352h16"/>
+          </g>
+          <text x="152" y="328" font-family="Inter,sans-serif" font-weight="700" font-size="28" fill="#0f172a">Skills</text>
+          <text x="152" y="362" font-family="Inter,sans-serif" font-weight="500" font-size="22" fill="#475569">domain knowledge</text>
+          <text x="152" y="404" font-family="ui-monospace,Menlo,monospace" font-size="20" fill="#047857">skill_manager.py</text>
+
+          <!-- Layer 3 · Conversation memory -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="40" y="500" width="420" height="160" rx="20" fill="url(#ctx-amber)" stroke="#f59e0b" stroke-width="2"/>
+          </g>
+          <rect x="68" y="532" width="60" height="60" rx="12" fill="#f59e0b" opacity=".18"/>
+          <g stroke="#92400e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none">
+            <path d="M80 544c0-3 2-5 5-5h22c3 0 5 2 5 5v16c0 3-2 5-5 5h-12l-9 9v-9h-1c-3 0-5-2-5-5z"/>
+            <path d="M90 552h12M90 560h8" stroke-width="2.6"/>
+          </g>
+          <text x="152" y="548" font-family="Inter,sans-serif" font-weight="700" font-size="28" fill="#0f172a">Conversation</text>
+          <text x="152" y="582" font-family="Inter,sans-serif" font-weight="700" font-size="28" fill="#0f172a">memory</text>
+          <text x="152" y="624" font-family="ui-monospace,Menlo,monospace" font-size="20" fill="#92400e">_trim_memory</text>
+
+          <!-- Curved flow paths from each layer to the prompt template's left edge -->
+          <path class="flow" d="M 460 140 C 620 140, 660 360, 820 360" stroke="#3b82f6" stroke-width="4" fill="none" stroke-linecap="round" opacity=".75" marker-end="url(#arrow-blue)"/>
+          <path class="flow" d="M 460 360 C 620 360, 700 360, 820 360" stroke="#10b981" stroke-width="4" fill="none" stroke-linecap="round" opacity=".75" marker-end="url(#arrow-green)"/>
+          <path class="flow" d="M 460 580 C 620 580, 660 360, 820 360" stroke="#f59e0b" stroke-width="4" fill="none" stroke-linecap="round" opacity=".75" marker-end="url(#arrow-amber)"/>
+
+          <!-- Prompt template (central convergence) -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="830" y="220" width="280" height="280" rx="22" fill="url(#ctx-prompt)" stroke="#0f172a" stroke-width="3"/>
+          </g>
+          <text x="970" y="262" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="16" letter-spacing="3" fill="#475569">PROMPT TEMPLATE</text>
+          <line x1="860" y1="282" x2="1080" y2="282" stroke="#e2e8f0" stroke-width="1.5"/>
+          <rect x="870" y="304" width="200" height="46" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+          <text x="970" y="334" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="600" font-size="20" fill="#1d4ed8">additional_context</text>
+          <text x="970" y="380" text-anchor="middle" font-family="Inter,sans-serif" font-weight="500" font-size="20" fill="#94a3b8">+</text>
+          <rect x="870" y="396" width="200" height="46" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+          <text x="970" y="426" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-weight="600" font-size="20" fill="#6d28d9">chat_history</text>
+          <text x="970" y="478" text-anchor="middle" font-family="Inter,sans-serif" font-style="italic" font-size="16" fill="#94a3b8">prompt_handler.py</text>
+
+          <!-- User question entering from below -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="830" y="608" width="280" height="68" rx="34" fill="#fff" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 5"/>
+          </g>
+          <text x="970" y="650" text-anchor="middle" font-family="Inter,sans-serif" font-weight="600" font-size="22" fill="#475569">user question</text>
+          <path d="M 970 605 L 970 510" stroke="#94a3b8" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="8 6" marker-end="url(#arrow-muted)"/>
+
+          <!-- Arrow from prompt template to LLM -->
+          <path class="flow slow" d="M 1110 360 L 1240 360" stroke="#0f172a" stroke-width="4" fill="none" stroke-linecap="round" marker-end="url(#arrow-dark)"/>
+
+          <!-- LLM API box -->
+          <g filter="url(#ctx-shadow)">
+            <rect x="1260" y="260" width="320" height="200" rx="22" fill="url(#ctx-llm)"/>
+          </g>
+          <g transform="translate(1290 305)" fill="#fff">
+            <path d="M28 0 L8 32 L24 32 L16 60 L46 24 L30 24 z" opacity=".95"/>
+          </g>
+          <text x="1420" y="330" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="16" letter-spacing="3" fill="#fff" opacity=".75">LLM API</text>
+          <text x="1420" y="396" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="48" fill="#fff">model</text>
+
+          <!-- Annotation captions next to each layer connection -->
+          <text x="500" y="120" font-family="Inter,sans-serif" font-style="italic" font-size="16" fill="#1d4ed8" opacity=".75">CREATE TABLE …</text>
+          <text x="500" y="340" font-family="Inter,sans-serif" font-style="italic" font-size="16" fill="#047857" opacity=".75">business rules</text>
+          <text x="500" y="560" font-family="Inter,sans-serif" font-style="italic" font-size="16" fill="#92400e" opacity=".75">prior turns</text>
+        </svg>
+
+        <div class="pipe-cap" style="margin-top:14px">An LLM only knows what we put in the prompt. Schema, business rules, prior turns — none of it is implicit.</div>
+      </div>
+    </section>
+
+    <!-- 18. LAYER 1 · SCHEMA + DISTINCT VALUES -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · layer 1</p>
+        <h2 class="h">Schema + distinct values.</h2>
+
+        <div class="ldetail">
+          <div class="num">1</div>
+          <div class="content">
+            <h3>What it is</h3>
+            <p>The structural description of the table. Schema is always-on. Distinct values is opt-in: it tells the model that <code>"Activity Type Code"</code> holds <code>'Deplaned'</code>, <code>'Enplaned'</code>, <code>'Thru / Transit'</code> — not <code>'arrival'</code> or <code>'departure'</code>, which is what an LLM will guess otherwise.</p>
+            <h3 style="margin-top:18px">How it's wired</h3>
+            <p><code>get_tbl_attr</code> + <code>get_character_distinct_values</code> in <code>sql_ai_agent/db_handler.py</code>. Formatted by <code>format_distinct_values_for_prompt</code> and appended to <code>additional_context</code>.</p>
+            <div class="control">Sidebar · Include Distinct Character Values</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19. LAYER 2 · SKILLS -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · layer 2</p>
+        <h2 class="h">Skills — the domain knowledge file.</h2>
+
+        <div class="ldetail">
+          <div class="num">2</div>
+          <div class="content">
+            <h3>What it is</h3>
+            <p>A markdown file under <code>skills/</code> that encodes what a human analyst knows but a generic LLM doesn't: column meanings (<code>Deplaned</code>=arrival), business rules (exclude transit, use Operating Airline), query patterns, percentage/growth math, common pitfalls.</p>
+            <h3 style="margin-top:18px">How it's wired</h3>
+            <p><code>SkillManager.load_skill(...)</code> in <code>sql_ai_agent/skill_manager.py</code>. <code>SqlAgent.__init__</code> tries <code>&lt;tbl_name&gt;</code>, <code>&lt;tbl_name&gt;_context</code>, <code>sfo_&lt;tbl_name&gt;_context</code>. For us: <code>skills/sfo_air_traffic_context.md</code> (~250 lines).</p>
+            <div class="control">Code-only today (no sidebar toggle)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20. LAYER 3 · CONVERSATION MEMORY -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · layer 3</p>
+        <h2 class="h">Conversation memory.</h2>
+
+        <div class="ldetail">
+          <div class="num">3</div>
+          <div class="content">
+            <h3>What it is</h3>
+            <p>A buffer of prior user/assistant turns. Lets the agent resolve <em>"what about 2023?"</em> against the previous question. FIFO; capped at <code>memory_size</code> pairs.</p>
+            <h3 style="margin-top:18px">How it's wired</h3>
+            <p><code>InMemoryChatMessageHistory</code> from <code>langchain_core</code>. The prompt template's <code>MessagesPlaceholder(variable_name="chat_history")</code> threads it through. <code>_trim_memory</code> trims FIFO.</p>
+            <div class="control">Sidebar · Enable Conversation Memory · Memory Size</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21. DEMO CUE · TOPIC 03 -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 03 · demo</p>
+        <h2 class="h">Toggle context on and off.</h2>
+
+        <div class="democue">
+          <div class="badge">▶</div>
+          <div class="text">
+            <h3>app/agent_app.py</h3>
+            <p>Same model, same DB. Flip one knob at a time.</p>
+          </div>
+        </div>
+
+        <div class="practices" style="margin-top:24px">
+          <div class="p"><div class="n">1</div><div class="t"><h4>Distinct values OFF</h4><p>Ask <code>"What activity type codes are in the database?"</code> — watch the agent guess.</p></div></div>
+          <div class="p"><div class="n">2</div><div class="t"><h4>A question that needs the skill</h4><p><code>"Year-over-year passenger growth from 2023 to 2024?"</code> — without the skill, transit gets counted, denominator's wrong.</p></div></div>
+          <div class="p"><div class="n">3</div><div class="t"><h4>Memory on → follow-up</h4><p><code>"Show me passengers in 2024."</code> then <code>"What about 2023?"</code> — agent resolves the reference. Toggle memory off; it can't.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22. TOPIC 03 TAKEAWAY -->
+    <section class="slide">
+      <div class="wrap" style="text-align:center">
+        <p class="eyebrow">Topic 03 · takeaway</p>
+        <h2 class="h" style="margin-bottom:6px">Context is a data-engineering discipline. Curate it.</h2>
+        <h3 class="sub" style="margin:0 auto 18px">Three layers, one prompt.</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">schema + distinct values</code> ·
+            <code class="inline">skills</code> ·
+            <code class="inline">memory</code>
+          </div>
+          <div class="foot">Next → Topic 04 · what the agent is allowed to do.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION E · TOPIC 04 — GUARDRAILS
+         ============================================================ -->
+
+    <!-- 23. SECTION DIVIDER · TOPIC 04 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 04 · 10 min</p>
+        <h2 class="h">SQL AI Agent <span class="accent">guardrails</span>.</h2>
+        <h3 class="sub">Context tells the agent what it should do. Guardrails decide what it's allowed to do.</h3>
+      </div>
+    </section>
+
+    <!-- 24. THREE GUARDRAILS GRID -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 04 · three guardrails</p>
+        <h2 class="h">Three layers between LLM output and the DB.</h2>
+
+        <div class="guards">
+          <div class="g admin">
+            <div class="num">Guardrail 01</div>
+            <h4>Admin control — read-only</h4>
+            <p>Only <code>Select</code>, <code>With</code>, <code>Show</code>, <code>Describe</code>. Everything else is blocked at the validator.</p>
+          </div>
+          <div class="g valid">
+            <div class="num">Guardrail 02</div>
+            <h4>SQL validation</h4>
+            <p><code>sqlglot</code> parses first. Multi-statement input is blocked. Unparseable strings are conservatively blocked.</p>
+          </div>
+          <div class="g limit">
+            <div class="num">Guardrail 03</div>
+            <h4>LIMIT enforcement</h4>
+            <p>Every <code>SELECT</code> gets a <code>LIMIT</code>. Caps unbounded scans before they kill the workshop laptop.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 25. ValidationConfig CODE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 04 · the defaults that matter</p>
+        <h2 class="h">ValidationConfig.</h2>
+        <p class="lead">Eight lines of safety. Defined in <code>sql_ai_agent/sql_validator.py</code>.</p>
+
+<pre class="code"><span class="k">@dataclass</span>
+<span class="k">class</span> <span class="f">ValidationConfig</span>:
+    read_only: <span class="k">bool</span> = <span class="v">True</span>
+    max_limit: <span class="k">int</span> = <span class="v">10000</span>
+    enforce_limit: <span class="k">bool</span> = <span class="v">True</span>
+    allowed_statements: <span class="k">list</span> = field(
+        default_factory=<span class="k">lambda</span>: [<span class="s">"Select"</span>, <span class="s">"With"</span>, <span class="s">"Show"</span>, <span class="s">"Describe"</span>]
+    )</pre>
+      </div>
+    </section>
+
+    <!-- 26. SAMPLE DESTRUCTIVE QUERIES -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 04 · let's try to break it</p>
+        <h2 class="h">Six prompts, six outcomes.</h2>
+
+        <table class="qtable">
+          <thead>
+            <tr><th>User asks</th><th>LLM might generate</th><th>Validator outcome</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Drop the air_traffic table.</td><td><code>DROP TABLE air_traffic</code></td><td class="out bad">Blocked — read-only</td></tr>
+            <tr><td>Delete all rows where Year is 1999.</td><td><code>DELETE FROM ...</code></td><td class="out bad">Blocked — read-only</td></tr>
+            <tr><td>Update Operating Airline to 'X'.</td><td><code>UPDATE ... SET ...</code></td><td class="out bad">Blocked — read-only</td></tr>
+            <tr><td>Show all rows in the table.</td><td><code>SELECT * FROM air_traffic</code></td><td class="out good">Allowed; LIMIT 10 added</td></tr>
+            <tr><td>Show 2024 data; DROP TABLE ...</td><td><code>SELECT ... ; DROP ...</code></td><td class="out bad">Blocked — multi-statement</td></tr>
+            <tr><td>Top 5 airlines by passenger count.</td><td><code>SELECT ... LIMIT 5</code></td><td class="out good">Allowed; LIMIT 5 kept</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 27. SAFETY BEATS CORRECTION -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 04 · why blocked = blocked</p>
+        <div class="bigquote">
+          <span class="qmark">"</span>
+          <p class="qtext">Safety beats <em>correction</em>.</p>
+          <div class="qfoot">When validation fails in read-only mode, <code>SqlAgent.ask_question</code> returns immediately. No retry. No fallback. Don't give the agent a second chance to ask for a destructive query.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 28. TOPIC 04 TAKEAWAY -->
+    <section class="slide">
+      <div class="wrap" style="text-align:center">
+        <p class="eyebrow">Topic 04 · takeaway</p>
+        <h2 class="h" style="margin-bottom:6px">Validate before you execute.</h2>
+        <h3 class="sub" style="margin:0 auto 18px">The validator is the only thing that knows the difference between "answer" and "modify".</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">read-only</code> ·
+            <code class="inline">parse first</code> ·
+            <code class="inline">enforce LIMIT</code>
+          </div>
+          <div class="foot">Next → Topic 05 · choosing the model.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION F · TOPIC 05 — MODEL EVAL
+         ============================================================ -->
+
+    <!-- 29. SECTION DIVIDER · TOPIC 05 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · 15 min</p>
+        <h2 class="h">Model performance &amp; <span class="accent">evaluation</span>.</h2>
+        <h3 class="sub">Without an eval, model selection collapses to vibes.</h3>
+      </div>
+    </section>
+
+    <!-- 30. WHY EVAL MATTERS -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · why eval matters</p>
+        <h2 class="h">Define "working" before you pick.</h2>
+        <p class="lead">The model card won't tell us how a model handles <code>air_traffic</code>. Pricing tier won't tell us either. Brand won't tell us at all.</p>
+
+        <div class="layers" style="grid-template-columns:repeat(3,1fr);margin-top:36px">
+          <div class="l core">
+            <div class="ttl">What to measure</div>
+            <p>Success rate · latency · fix rate. Three numbers, three different questions.</p>
+          </div>
+          <div class="l ctx">
+            <div class="ttl">Against what</div>
+            <p>A fixed test suite. The suite is the spec — pick the model after it exists.</p>
+          </div>
+          <div class="l rel">
+            <div class="ttl">How often</div>
+            <p>Every prompt change, every model bump. Drift is real.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 31. THE EVAL FRAMEWORK -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · the framework</p>
+        <h2 class="h">sql_ai_agent.testing.</h2>
+
+        <div class="layers" style="grid-template-columns:1fr 1fr;margin-top:24px">
+          <div class="l core">
+            <div class="ttl">What it provides</div>
+            <div class="mods">TestCase · TestRunner<br>get_test_cases · get_test_summary</div>
+            <p>Each model gets <strong>20 query-generation tests</strong> + <strong>5 debug-mechanism tests</strong>. Twenty-five runs per model.</p>
+          </div>
+          <div class="l ctx">
+            <div class="ttl">The suite (today)</div>
+            <div class="mods">5 easy · 8 medium · 7 hard</div>
+            <p>Eleven categories: basic · aggregation · filtering · comparison · ranking · time series · growth · percentage · market share · complex filtering · edge cases.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 32. MODELS TESTED -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · the field</p>
+        <h2 class="h">Eight models, two providers.</h2>
+
+        <div class="layers" style="grid-template-columns:1fr 1fr;margin-top:32px">
+          <div class="l core">
+            <div class="ttl">OpenAI</div>
+            <div class="mods" style="line-height:1.7">gpt-5.5<br>gpt-5.5-pro<br>gpt-5.4-mini<br>gpt-5.4-nano<br>gpt-4.1</div>
+          </div>
+          <div class="l ctx">
+            <div class="ttl">Docker Model Runner (local)</div>
+            <div class="mods" style="line-height:1.7">ai/granite-4.0-h-micro<br>ai/llama3.2:latest<br>ai/gemma4:100k</div>
+          </div>
+        </div>
+        <p class="lead" style="margin-top:32px;font-size:26px">Always include a cheap model and a local model in the comparison. The default isn't always the right choice.</p>
+      </div>
+    </section>
+
+    <!-- 33. HEADLINE RESULTS TABLE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · results · run 20260503_150027</p>
+        <h2 class="h">The headline.</h2>
+
+        <table class="rtable">
+          <thead>
+            <tr><th>Model</th><th>Provider</th><th>Success</th><th>Avg time (s)</th><th>Fix rate</th></tr>
+          </thead>
+          <tbody>
+            <tr class="top"><td><code>gpt-5.4-mini</code></td><td>openai</td><td>90.00%</td><td>1.192</td><td>100%</td></tr>
+            <tr><td><code>gpt-5.5</code></td><td>openai</td><td>90.00%</td><td>5.723</td><td>100%</td></tr>
+            <tr><td><code>gpt-4.1</code></td><td>openai</td><td>80.00%</td><td>0.825</td><td>100%</td></tr>
+            <tr><td><code>ai/granite-4.0-h-micro</code></td><td>docker</td><td>70.00%</td><td>2.828</td><td>80%</td></tr>
+            <tr><td><code>ai/gemma4:100k</code></td><td>docker</td><td>65.00%</td><td>1.956</td><td>100%</td></tr>
+            <tr><td><code>gpt-5.4-nano</code></td><td>openai</td><td>50.00%</td><td>3.376</td><td>100%</td></tr>
+            <tr><td><code>ai/llama3.2:latest</code></td><td>docker</td><td>40.00%</td><td>1.577</td><td>80%</td></tr>
+            <tr class="bad"><td><code>gpt-5.5-pro</code></td><td>openai</td><td>0.00%</td><td>0.117</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 34. CHARTS REFERENCE -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · the charts</p>
+        <h2 class="h">Three views, three stories.</h2>
+
+        <div class="charts">
+          <div class="ch">
+            <div class="name">success_rates_<br>20260503_150027.html</div>
+            <h4>Quality bar</h4>
+            <p>gpt-5.4-mini ties gpt-5.5 at 90%, ~5× faster.</p>
+          </div>
+          <div class="ch">
+            <div class="name">execution_times_<br>20260503_150027.html</div>
+            <h4>Latency rank</h4>
+            <p>gpt-4.1 fastest at 0.8s; gpt-5.5 slowest at 5.7s. Both clear 80%.</p>
+          </div>
+          <div class="ch">
+            <div class="name">difficulty_heatmap_<br>20260503_150027.html</div>
+            <h4>Easy vs hard</h4>
+            <p>100/30 ≠ 70/70. The heatmap is the only place that surfaces this.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 35. HEADLINE FINDING -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · what the eval found</p>
+        <div class="bigquote">
+          <span class="qmark">"</span>
+          <p class="qtext"><em>gpt-5.4-mini ≈ gpt-5.5</em> at 90% success, at <em>~5× lower latency</em>.</p>
+          <div class="qfoot">And: <code>gpt-5.5-pro</code> failed every test — a <code>404 not a chat model</code> config bug. Branding hid it. The eval surfaced it.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 36. THREE RULES FOR SHIPPING -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 05 · three rules for shipping</p>
+        <h2 class="h">For the next time you pick a model.</h2>
+
+        <div class="practices">
+          <div class="p"><div class="n">1</div><div class="t"><h4>Define the tests first.</h4><p>The test suite is the spec. Pick the model after it exists, not before.</p></div></div>
+          <div class="p"><div class="n">2</div><div class="t"><h4>Always include a cheap and a local model.</h4><p>The default isn't always the right choice. Local models hit 65–70% here, with full data privacy.</p></div></div>
+          <div class="p"><div class="n">3</div><div class="t"><h4>Re-run the eval whenever anything changes.</h4><p>Prompt template, schema, skill file, model version. Drift is real. Production regressions are not cheap.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 37. TOPIC 05 TAKEAWAY -->
+    <section class="slide">
+      <div class="wrap" style="text-align:center">
+        <p class="eyebrow">Topic 05 · takeaway</p>
+        <h2 class="h" style="margin-bottom:6px">Eval surfaces what branding hides.</h2>
+        <h3 class="sub" style="margin:0 auto 18px">Pick the cheapest model that meets your bar.</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">success rate</code> ·
+            <code class="inline">latency</code> ·
+            <code class="inline">fix rate</code>
+          </div>
+          <div class="foot">Next → Topic 06 · best practices we've earned.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION G · TOPIC 06 — BEST PRACTICES
+         ============================================================ -->
+
+    <!-- 38. SECTION DIVIDER · TOPIC 06 -->
+    <section class="slide divider">
+      <div class="wrap">
+        <p class="eyebrow">Topic 06 · 8 min · recap</p>
+        <h2 class="h">Best <span class="accent">practices</span>.</h2>
+        <h3 class="sub">Five threads through everything we've covered.</h3>
+      </div>
+    </section>
+
+    <!-- 39. FIVE PRACTICES -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 06 · five practices</p>
+        <h2 class="h">When you go ship one of these.</h2>
+
+        <div class="practices">
+          <div class="p"><div class="n">1</div><div class="t"><h4>Context is a data-engineering discipline.</h4><p>Curating distinct values and the skill file is engineering work. Treat it like a pipeline you own.</p></div></div>
+          <div class="p"><div class="n">2</div><div class="t"><h4>Skills compound.</h4><p>Write the domain knowledge down once, version it. Every new edge-case rule benefits every future query.</p></div></div>
+          <div class="p"><div class="n">3</div><div class="t"><h4>Short-term and long-term memory serve different jobs.</h4><p>In-process chat history for follow-ups; DB-backed Q&amp;A logs for cross-session learning.</p></div></div>
+          <div class="p"><div class="n">4</div><div class="t"><h4>Measure, don't guess.</h4><p>Re-run the eval whenever you change the prompt, the schema, the skill file, or the model.</p></div></div>
+          <div class="p"><div class="n">5</div><div class="t"><h4>Plan for the model to fail.</h4><p>Hosted models rate-limit, time out, return un-parseable output. Configure a fallback. A local model is a strong one.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 40. WHAT'S NOT IN THIS WORKSHOP -->
+    <section class="slide">
+      <div class="wrap">
+        <p class="eyebrow">Topic 06 · honest scope</p>
+        <h2 class="h">What's not in this workshop.</h2>
+        <p class="lead">We kept the scope narrow on purpose.</p>
+
+        <div class="layers" style="grid-template-columns:repeat(2,1fr);margin-top:32px">
+          <div class="l ctx">
+            <div class="ttl">Out of scope today</div>
+            <div class="mods" style="line-height:1.7">tool-using agents (beyond SQL)<br>multi-agent orchestration<br>ReAct / planner-style architectures<br>fine-tuning your own model</div>
+          </div>
+          <div class="l rel">
+            <div class="ttl">What carries over</div>
+            <p>Context, guardrails, evaluation, and fallback all transfer to those settings unchanged. The SQL agent is the warm-up.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 41. CLOSING -->
+    <section class="slide">
+      <div class="wrap closing">
+        <p class="eyebrow">Closing</p>
+        <div class="hand">Thanks for following along.</div>
+        <h3 class="sub" style="margin:0 auto 24px">A SQL AI agent gets reliable when we treat it as a system, not a prompt.</h3>
+        <div class="takeaway-card">
+          <div class="quote">
+            <code class="inline">context</code> is engineered ·
+            <code class="inline">guardrails</code> are enforced ·
+            <code class="inline">models</code> are measured ·
+            <code class="inline">failure</code> has a fallback
+          </div>
+          <div class="foot">Q&amp;A · 10 min</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function(){
+      const slides=Array.from(document.querySelectorAll('.slide'));
+      const total=slides.length;
+      const prog=document.getElementById('progress');
+      let i=0;
+      function show(n){
+        i=Math.max(0,Math.min(total-1,n));
+        slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+        prog.style.width=(((i+1)/total)*100)+'%';
+        history.replaceState(null,'','#'+(i+1));
+      }
+      function next(){show(i+1)}function prev(){show(i-1)}
+      document.addEventListener('keydown',e=>{
+        if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next();}
+        else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev();}
+        else if(e.key==='Home'){e.preventDefault();show(0);}
+        else if(e.key==='End'){e.preventDefault();show(total-1);}
+      });
+      document.addEventListener('click',e=>{if(e.target.closest('a,pre,code'))return;next();});
+      const start=parseInt((location.hash||'#1').slice(1),10);
+      show(isFinite(start)?start-1:0);
+    })();
+  </script>
+</body>
+</html>

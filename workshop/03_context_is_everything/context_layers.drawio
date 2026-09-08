@@ -1,0 +1,61 @@
+<mxfile host="Electron">
+  <diagram name="Context Layers" id="ctx-layers-1">
+    <mxGraphModel dx="1422" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Three Context Layers Feeding the Prompt" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="280" y="40" width="540" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="layer1" value="&lt;b&gt;Schema + distinct values&lt;/b&gt;&lt;br&gt;&lt;br&gt;CREATE TABLE air_traffic (...)&lt;br&gt;&lt;br&gt;&quot;Activity Type Code&quot;:&lt;br&gt;'Deplaned', 'Enplaned',&lt;br&gt;'Thru / Transit'&lt;br&gt;&lt;br&gt;&lt;i&gt;db_handler.get_tbl_attr&lt;/i&gt;&lt;br&gt;&lt;i&gt;db_handler.get_character_distinct_values&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=left;spacingLeft=12;spacingRight=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="layer2" value="&lt;b&gt;Skills (domain knowledge)&lt;/b&gt;&lt;br&gt;&lt;br&gt;skills/sfo_air_traffic_context.md&lt;br&gt;&lt;br&gt;Business rules, query patterns,&lt;br&gt;codeshare handling, growth-rate&lt;br&gt;rules, common pitfalls.&lt;br&gt;&lt;br&gt;&lt;i&gt;skill_manager.SkillManager.load_skill&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=left;spacingLeft=12;spacingRight=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="350" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="layer3" value="&lt;b&gt;Conversation memory&lt;/b&gt;&lt;br&gt;&lt;br&gt;Prior user / assistant turns&lt;br&gt;&lt;br&gt;User: passengers in 2024?&lt;br&gt;Agent: SELECT SUM(...) WHERE Year=2024&lt;br&gt;User: what about 2023?&lt;br&gt;&lt;br&gt;&lt;i&gt;InMemoryChatMessageHistory&lt;/i&gt;&lt;br&gt;&lt;i&gt;SqlAgent._trim_memory&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;align=left;spacingLeft=12;spacingRight=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="80" y="580" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="user" value="&lt;b&gt;User question&lt;/b&gt;&lt;br&gt;&lt;br&gt;&quot;What's the year-over-year&lt;br&gt;passenger growth from&lt;br&gt;2023 to 2024?&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;align=center;" vertex="1" parent="1">
+          <mxGeometry x="80" y="810" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="prompt" value="&lt;b&gt;Prompt template&lt;/b&gt;&lt;br&gt;&lt;br&gt;System: SQL dialect, table,&lt;br&gt;{additional_context}&lt;br&gt;MessagesPlaceholder(chat_history)&lt;br&gt;User: {question}&lt;br&gt;&lt;br&gt;&lt;i&gt;prompt_handler.set_prompt_template&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;align=center;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="540" y="380" width="260" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="llm" value="&lt;b&gt;LLM API&lt;/b&gt;&lt;br&gt;&lt;br&gt;ChatOpenAI&lt;br&gt;(provider + model)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;align=center;" vertex="1" parent="1">
+          <mxGeometry x="900" y="420" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" parent="1" source="layer1" target="prompt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1" source="layer2" target="prompt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#d79b00;strokeWidth=2;" edge="1" parent="1" source="layer3" target="prompt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" parent="1" source="user" target="prompt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="prompt" target="llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl1" value="schema +&#10;distinct_char_values=True" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="200" width="160" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl2" value="skill=True&#10;additional_context" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="430" width="160" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl3" value="memory=True&#10;chat_history" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="660" width="160" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl4" value="rendered prompt" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=2;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="800" y="460" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&#10;Blue: structural context (always-on schema, opt-in distinct values)&#10;Green: domain context (markdown skill file, opt-in)&#10;Orange: conversational context (in-memory chat history, opt-in)&#10;Red: the user's natural-language question&#10;Yellow: the prompt template that fuses everything above&#10;Purple: the LLM API call" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=10;spacingRight=10;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="540" y="640" width="520" height="120" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -29,22 +29,31 @@ The container expects the following environment variables to be set on your loca
 | `POSTGRES_PASSWORD` | `password` | Database password |
 | `POSTGRES_DB` | `my_db` | Database name |
 
-**Docker volume** (required):
+**Database storage** (required):
 
 | Variable | Description |
 |---|---|
-| `POSTGRES_DATABASES_PATH` | Local path for persisting PostgreSQL data across container restarts (e.g., `~/postgres-data`) |
+| `DUCKDB_DATABASES_PATH` | Local path for storing persistent DuckDB database files (e.g., `~/databases/duckdb`) |
+| `POSTGRES_DATABASES_PATH` | Local path for persisting PostgreSQL data across container restarts (e.g., `~/databases/postgres`) |
 
-To set these, add them to your shell profile:
+On a Mac that uses zsh, add these values to `~/.zshenv`:
 
 ```bash
 export OPENAI_API_KEY="your-openai-key"
 export GEMINI_API_KEY="your-gemini-key"
 export ANTHROPIC_API_KEY="your-anthropic-key"
-export POSTGRES_DATABASES_PATH="$HOME/postgres-data"
+export DUCKDB_DATABASES_PATH="$HOME/databases/duckdb"
+export POSTGRES_DATABASES_PATH="$HOME/databases/postgres"
 ```
 
-Then reload your shell (`source ~/.zshrc`) or restart your terminal.
+Then reload the file (`source ~/.zshenv`) or restart your terminal.
+
+Create the host directories before starting the containers:
+
+```bash
+mkdir -p "$DUCKDB_DATABASES_PATH"
+mkdir -p "$POSTGRES_DATABASES_PATH/sql-ai-agent"
+```
 
 ### Launching the Container
 
@@ -70,6 +79,9 @@ docker/
   build_base_docker.sh   # Build script for the base image
   build_dev_docker.sh    # Build script for the dev image
 docker-compose.yaml      # Multi-service container orchestration
+tutorials/
+  README.md              # Docker and virtual-environment instructions
+  03_data.ipynb          # Data setup with DuckDB and Ibis
 ```
 
 ## License
