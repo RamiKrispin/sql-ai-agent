@@ -10,6 +10,11 @@ ENV VENV_NAME=$VENV_NAME
 ENV PYTHON_VER=$PYTHON_VER
 ENV RUFF_VER=$RUFF_VER
 
+# PostgreSQL client runtime required by psycopg and the Ibis PostgreSQL backend
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set Python environment
 COPY install_uv.sh requirements.txt settings/
 RUN bash ./settings/install_uv.sh $VENV_NAME $PYTHON_VER $RUFF_VER

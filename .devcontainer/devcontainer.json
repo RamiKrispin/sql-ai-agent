@@ -52,6 +52,7 @@
         "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY:key_is_missing}",
         "POSTGRES_PASSWORD": "${localEnv:POSTGRES_PASSWORD:password}",
         "POSTGRES_USER": "${localEnv:POSTGRES_USER:postgres}",
-        "POSTGRES_DB": "${localEnv:POSTGRES_DB:my_db}"
+        "POSTGRES_DB": "${localEnv:POSTGRES_DB:my_db}",
+        "DUCKDB_DATABASES_PATH": "${containerEnv:DUCKDB_DATABASES_PATH}"
     }
 }
