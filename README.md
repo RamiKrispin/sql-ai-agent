@@ -15,7 +15,7 @@ Models*](https://www.linkedin.com/learning/build-with-ai-sql-agents-with-large-l
 | --- | --- | --- |
 | **Introduction to SQL AI Agents: The Four Components Behind Natural Language SQL** | [Read the tutorial](https://ramikrispin.substack.com/p/introduction-to-sql-ai-agents-the) | — |
 | **Context in SQL AI Agents: The Three Layers Behind Reliable Answers** | [Read the tutorial](https://ramikrispin.substack.com/p/context-in-sql-ai-agents-the-three) | — |
-| **📌 Part I: Set up a Python environment for SQL AI agents** | TBD | [Setup guide](tutorials/README.md) |
+| **📌 Part I: Set up a Python environment for SQL AI agents** | [Read the tutorial](https://ramikrispin.substack.com/p/set-up-a-python-environment-for-sql) | [Setup guide](tutorials/README.md) |
 | **⏭️ Part II: Prepare data for a SQL AI agent with DuckDB and Ibis** | TBD | [Notebook](tutorials/03a_duckdb_settings.ipynb) |
 
 ## License
