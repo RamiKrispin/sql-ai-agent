@@ -32,6 +32,17 @@ New-Item -ItemType Directory -Force "$HOME\databases\duckdb"
   with DuckDB and Ibis
 - [`03a_postgresql_settings.ipynb`](03a_postgresql_settings.ipynb) — Optional:
   set up the data with PostgreSQL and Ibis in the Dev Container
+- [`04_simple_sql_ai_agent.ipynb`](04_simple_sql_ai_agent.ipynb) — Build the
+  first complete natural-language-to-SQL loop with DuckDB
+- [`05_schema_and_sql_dialect_context.ipynb`](05_schema_and_sql_dialect_context.ipynb)
+  — Build reusable schema and DuckDB dialect context
+- [`06_data_value_context.ipynb`](06_data_value_context.ipynb) — Add bounded,
+  reviewed categorical values to prompt context
+
+The context notebooks run deterministic DuckDB checks without making a model
+request. Their optional `sql_ai_agent()` helpers require `OPENAI_API_KEY` and
+make a request only when called. Model output is candidate SQL; it is not a
+safety boundary or a proof of semantic correctness.
 
 ## Option 1: run with a local virtual environment
 
